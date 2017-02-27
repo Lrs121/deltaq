@@ -1,21 +1,17 @@
-﻿using System.IO;
-using NUnit.Framework;
+﻿using deltaq.VcDiff;
+using System.IO;
+using Xunit;
 
 namespace deltaq_tests
 {
-    [TestFixture]
     public class VcDiffTests
     {
-        [Test]
-        public void VcDiffCreate()
+        [Fact]
+        public void VcDiffParse()
         {
-            var buf = new byte[0x1000];
+            const string file = @"X:\Storage\oTTW\Installer\bin\Debug\resources\hk.delta";
 
-            byte[] outBytes;
-            using (var outStream = new MemoryStream())
-            {
-                deltaq.VcDiff.Create(buf, buf, outStream);
-            }
+            var vcFile = new VcDeltaFile(File.OpenRead(file));
         }
     }
 }
