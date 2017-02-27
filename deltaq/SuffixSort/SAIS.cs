@@ -31,17 +31,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace deltaq
+namespace deltaq.SuffixSort
 {
     /// <summary>
     ///     An implementation of the induced sorting based suffix array construction algorithm.
     /// </summary>
-    public static class SAIS
+    public class SAIS : ISuffixSort
     {
         private const int MinBucketSize = 256;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void GetCounts(IList<int> T, IList<int> c, int n, int k)
+        private void GetCounts(IList<int> T, IList<int> c, int n, int k)
         {
             int i;
             for (i = 0; i < k; ++i)
@@ -52,7 +52,7 @@ namespace deltaq
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void GetBuckets(IList<int> c, IList<int> b, int k, bool end)
+        private void GetBuckets(IList<int> c, IList<int> b, int k, bool end)
         {
             int i, sum = 0;
             for (i = 0; i < k; ++i)
@@ -64,7 +64,7 @@ namespace deltaq
 
         /* sort all type LMS suffixes */
 
-        private static void LMS_sort(IList<int> T, IList<int> sa, IList<int> c, IList<int> b, int n, int k)
+        private void LMS_sort(IList<int> T, IList<int> sa, IList<int> c, IList<int> b, int n, int k)
         {
             int bb, i, j;
             int c0, c1;
@@ -118,7 +118,7 @@ namespace deltaq
             }
         }
 
-        private static int LMS_post_proc(IList<int> T, IList<int> sa, int n, int m)
+        private int LMS_post_proc(IList<int> T, IList<int> sa, int n, int m)
         {
             int i, j, p, q;
             int qlen, name;
@@ -202,7 +202,7 @@ namespace deltaq
             return name;
         }
 
-        private static void InduceSA(IList<int> T, int[] sa, IList<int> c, IList<int> b, int n, int k)
+        private void InduceSA(IList<int> T, int[] sa, IList<int> c, IList<int> b, int n, int k)
         {
             int bb, i, j;
             int c0, c1;
@@ -256,7 +256,7 @@ namespace deltaq
         /* find the suffix array SA of T[0..n-1] in {0..k-1}^n
            use a working space (excluding T and SA) of at most 2n+O(1) for a constant alphabet */
 
-        private static void sais_main(IList<int> T, int[] sa, int fs, int n, int k)
+        private void sais_main(IList<int> T, int[] sa, int fs, int n, int k)
         {
             IList<int> c, b;
             int i, j, bb, m;
@@ -486,10 +486,10 @@ namespace deltaq
         /// </summary>
         /// <param name="T">input bytes</param>
         /// <returns>0 if no error occurred, -1 or -2 otherwise</returns>
-        public static int[] Sufsort(byte[] T)
+        public int[] Sort(byte[] T)
         {
             if (T == null)
-                throw new ArgumentNullException("T");
+                throw new ArgumentNullException(nameof(T));
 
             var sa = new int[T.Length + 1];
 
