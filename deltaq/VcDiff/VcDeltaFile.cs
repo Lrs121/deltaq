@@ -52,5 +52,32 @@ namespace deltaq.VcDiff
                 //  compressed code table data
             }
         }
+
+        private void ReadWindow(BinaryReader reader)
+        {
+            var winIndicator = reader.ReadByte();
+
+            const byte VCD_SOURCE = 1;
+            const byte VCD_TARGET = 2;
+
+            bool useSource = (winIndicator & VCD_SOURCE) != 0;
+            bool useTarget = (winIndicator & VCD_TARGET) != 0;
+
+            if(useSource && useTarget)
+            {
+                throw new InvalidDataException("Window cannot use both source and target for a data segment");
+            }
+
+            int segmentLength;
+            int segmentPosition;
+
+            if(useSource || useTarget)
+            {
+                segmentLength = reader.ReadInt32();
+                segmentPosition = reader.ReadInt32();
+            }
+
+            
+        }
     }
 }
