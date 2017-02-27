@@ -79,5 +79,63 @@ namespace deltaq.VcDiff
 
             
         }
+
+        private void ReadDelta(BinaryReader reader)
+        {
+            //This integer gives the total number of remaining bytes that
+            //comprise the data of the delta encoding for this target
+            //window.
+            var deltaLength = reader.ReadInt32();
+
+            //This integer indicates the actual size of the target window
+            //after decompression.  A decoder can use this value to
+            //allocate memory to store the uncompressed data.
+            var targetLength = reader.ReadInt32();
+
+            /*
+            This byte is a set of bits, as shown:
+
+          7 6 5 4 3 2 1 0
+         +-+-+-+-+-+-+-+-+
+         | | | | | | | | |
+         +-+-+-+-+-+-+-+-+
+                    ^ ^ ^
+                    | | |
+                    | | +-- VCD_DATACOMP
+                    | +---- VCD_INSTCOMP
+                    +------ VCD_ADDRCOMP
+
+              VCD_DATACOMP:   bit value 1.
+              VCD_INSTCOMP:   bit value 2.
+              VCD_ADDRCOMP:   bit value 4.
+            */
+            var deltaIndicator = reader.ReadByte();
+
+            const byte VCD_DATACOMP = 1;
+            if ((deltaIndicator & VCD_DATACOMP) != 0)
+            {
+                //decompress data
+            }
+
+            const byte VCD_INSTCOMP = 2;
+            if ((deltaIndicator & VCD_INSTCOMP) != 0)
+            {
+                //decompress instructions
+            }
+
+            const byte VCD_ADDRCOMP = 4;
+            if ((deltaIndicator & VCD_ADDRCOMP) != 0)
+            {
+                //decompress addresses
+            }
+
+            var lengthAddRun = reader.ReadInt32();
+            var lengthInstructions = reader.ReadInt32();
+            var lengthCopy = reader.ReadInt32();
+
+            var bufferAddRun = reader.ReadBytes(lengthAddRun);
+            var bufferInstructions = reader.ReadBytes(lengthInstructions);
+            var bufferCopy = reader.ReadBytes(lengthCopy);
+        }
     }
 }
