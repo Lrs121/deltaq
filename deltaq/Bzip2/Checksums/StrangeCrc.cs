@@ -151,7 +151,7 @@ namespace bz2core.Checksums
             if (index < 0)
                 index += 256;
 
-            globalCrc = (int)((globalCrc << 8) ^ crc32Table[index]);
+            globalCrc = unchecked((int)((globalCrc << 8) ^ crc32Table[index]));
         }
 
         /// <summary>

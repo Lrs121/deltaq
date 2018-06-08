@@ -532,7 +532,7 @@ namespace bz2core
         {
             while (bsLive > 0)
             {
-                baseStream.WriteByte((byte)(bsBuff >> 24)); // write 8-bit
+                baseStream.WriteByte(unchecked((byte)(bsBuff >> 24))); // write 8-bit
                 bsBuff <<= 8;
                 bsLive -= 8;
                 bytesOut++;
@@ -543,7 +543,7 @@ namespace bz2core
         {
             while (bsLive >= 8)
             {
-                baseStream.WriteByte((byte)(bsBuff >> 24)); // write 8-bit
+                baseStream.WriteByte(unchecked((byte)(bsBuff >> 24))); // write 8-bit
                 bsBuff <<= 8;
                 bsLive -= 8;
                 bytesOut++;

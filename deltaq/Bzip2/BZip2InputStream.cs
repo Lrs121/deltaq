@@ -349,13 +349,13 @@ namespace bz2core
 
             // 1528150659
             computedCombinedCRC = ((computedCombinedCRC << 1) & 0xFFFFFFFF) | (computedCombinedCRC >> 31);
-            computedCombinedCRC = computedCombinedCRC ^ (uint)computedBlockCRC;
+            computedCombinedCRC = unchecked(computedCombinedCRC ^ (uint)computedBlockCRC);
         }
 
         void Complete()
         {
             storedCombinedCRC = BsGetInt32();
-            if (storedCombinedCRC != (int)computedCombinedCRC)
+            if (unchecked(storedCombinedCRC != (int)computedCombinedCRC))
             {
                 CrcError();
             }
