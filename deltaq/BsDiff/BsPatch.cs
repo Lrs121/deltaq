@@ -27,6 +27,7 @@
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace deltaq.BsDiff
 {
@@ -83,7 +84,7 @@ namespace deltaq.BsDiff
         private static long CreatePatchStreams(OpenPatchStream openPatchStream, out Stream ctrl, out Stream diff, out Stream extra)
         {
             // read header
-            long controlLength, diffLength, newSize;
+            CompactLong controlLength, diffLength, newSize;
             using (var patchStream = openPatchStream(0, BsDiff.HeaderSize))
             {
                 // check patch stream capabilities
@@ -92,18 +93,21 @@ namespace deltaq.BsDiff
                 if (!patchStream.CanSeek)
                     throw new ArgumentException("Patch stream must be seekable", nameof(openPatchStream));
 
-                var header = new byte[BsDiff.HeaderSize];
-                patchStream.Read(header, 0, BsDiff.HeaderSize);
+                Span<byte> headerBytes = stackalloc byte[BsDiff.HeaderSize];
+                if (patchStream.Read(headerBytes) != headerBytes.Length)
+                    throw new InvalidOperationException("Can't read header");
+
+                var header = MemoryMarshal.Cast<byte, long>(headerBytes);
 
                 // check for appropriate magic
-                var signature = header.ReadLong();
+                CompactLong signature = header[0];
                 if (signature != BsDiff.Signature)
                     throw new InvalidOperationException("Corrupt patch");
 
                 // read lengths from header
-                controlLength = header.ReadLongAt(8);
-                diffLength = header.ReadLongAt(16);
-                newSize = header.ReadLongAt(24);
+                controlLength = header[1];
+                diffLength = header[2];
+                newSize = header[3];
 
                 if (controlLength < 0 || diffLength < 0 || newSize < 0)
                     throw new InvalidOperationException("Corrupt patch");
@@ -132,47 +136,65 @@ namespace deltaq.BsDiff
             if (!output.CanWrite)
                 throw new ArgumentException("Output stream must be writable", nameof(output));
 
+            Span<long> ctrlData = stackalloc long[3];
+            CompactLong addSize, copySize, seekAmount;
+
             using (ctrl)
             using (diff)
             using (extra)
-            using (var inputReader = new BinaryReader(input))
                 while (output.Position < newSize)
                 {
                     //read control data:
                     // set of triples (x,y,z) meaning
 
+                    var ctrlDataBuffer = MemoryMarshal.Cast<long, byte>(ctrlData);
+                    if (ctrl.Read(ctrlDataBuffer) != ctrlDataBuffer.Length)
+                        throw new InvalidOperationException("Bad control data");
+
                     // add x bytes from oldfile to x bytes from the diff block;
-                    var addSize = ctrl.ReadLong();
+                    addSize = ctrlData[0];
                     // copy y bytes from the extra block;
-                    var copySize = ctrl.ReadLong();
+                    copySize = ctrlData[1];
                     // seek forwards in oldfile by z bytes;
-                    var seekAmount = ctrl.ReadLong();
+                    seekAmount = ctrlData[2];
 
                     // sanity-check
                     if (output.Position + addSize > newSize)
                         throw new InvalidOperationException("Corrupt patch");
 
                     // read diff string in chunks
-                    foreach (var newData in diff.BufferedRead(addSize))
+                    do
                     {
-                        var inputData = inputReader.ReadBytes(newData.Length);
+                        Span<byte> newData = stackalloc byte[(int)addSize];
+                        Span<byte> inputData = stackalloc byte[(int)addSize];
 
-                        // add old data to diff string
-                        for (var i = 0; i < newData.Length; i++)
-                            newData[i] += inputData[i];
+                        if (diff.Read(newData) == newData.Length && input.Read(inputData) == inputData.Length)
+                        {
+                            addSize -= newData.Length;
 
-                        output.Write(newData, 0, newData.Length);
-                    }
+                            // add old data to diff string
+                            for (var i = 0; i < newData.Length; i++)
+                                newData[i] += inputData[i];
+
+                            output.Write(newData);
+                        }
+                    } while (addSize > 0);
 
                     // sanity-check
                     if (output.Position + copySize > newSize)
                         throw new InvalidOperationException("Corrupt patch");
 
                     // read extra string in chunks
-                    foreach (var extraData in extra.BufferedRead(copySize))
+                    do
                     {
-                        output.Write(extraData, 0, extraData.Length);
-                    }
+                        Span<byte> extraData = stackalloc byte[(int)copySize];
+
+                        if(extra.Read(extraData) == extraData.Length)
+                        {
+                            copySize -= extraData.Length;
+                            output.Write(extraData);
+                        }
+                    } while (copySize > 0);
 
                     // adjust position
                     input.Seek(seekAmount, SeekOrigin.Current);
