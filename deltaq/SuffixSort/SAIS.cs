@@ -63,7 +63,7 @@ namespace deltaq.SuffixSort
         private const int MinBucketSize = 256;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GetCounts(IList<int> T, IList<int> c, int n, int k)
+        private void GetCounts(ReadOnlySpan<byte> T, Span<byte> c, int n, int k)
         {
             int i;
             for (i = 0; i < k; ++i)
@@ -74,32 +74,33 @@ namespace deltaq.SuffixSort
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GetBuckets(IList<int> c, IList<int> b, int k, bool end)
+        private void GetBuckets(ReadOnlySpan<byte> c, Span<byte> b, int k, bool end)
         {
             int i, sum = 0;
             for (i = 0; i < k; ++i)
             {
                 sum += c[i];
-                b[i] = end ? sum : sum - c[i];
+                b[i] = checked((byte)(end ? sum : sum - c[i]));
             }
         }
 
         /* sort all type LMS suffixes */
 
-        private void LMS_sort(IList<int> T, IList<int> sa, IList<int> c, IList<int> b, int n, int k)
+        private void LMS_sort(ReadOnlySpan<byte> T, Span<byte> sa, Span<byte> c, Span<byte> b, int n, int k)
         {
-            int bb, i, j;
-            int c0, c1;
+            byte bb;
+            int i, j;
+            byte c0, c1;
 
             /* compute SAl */
-            if (Equals(c, b))
+            if (c == b)
                 GetCounts(T, c, n, k);
             GetBuckets(c, b, k, false); /* find starts of buckets */
 
             j = n - 1;
             bb = b[c1 = T[j]];
             --j;
-            sa[bb++] = (T[j] < c1) ? ~j : j;
+            sa[bb++] = checked((byte)((T[j] < c1) ? ~j : j));
             for (i = 0; i < n; ++i)
             {
                 if (0 < (j = sa[i]))
@@ -110,17 +111,17 @@ namespace deltaq.SuffixSort
                         bb = b[c1 = c0];
                     }
                     --j;
-                    sa[bb++] = (T[j] < c1) ? ~j : j;
+                    sa[bb++] = checked((byte)((T[j] < c1) ? ~j : j));
                     sa[i] = 0;
                 }
                 else if (j < 0)
                 {
-                    sa[i] = ~j;
+                    sa[i] = checked((byte)~j);
                 }
             }
 
             /* compute SAs */
-            if (Equals(c, b))
+            if (c == b)
                 GetCounts(T, c, n, k);
             GetBuckets(c, b, k, true); /* find ends of buckets */
 
@@ -134,13 +135,13 @@ namespace deltaq.SuffixSort
                         bb = b[c1 = c0];
                     }
                     --j;
-                    sa[--bb] = (T[j] > c1) ? ~(j + 1) : j;
+                    sa[--bb] = checked((byte)((T[j] > c1) ? ~(j + 1) : j));
                     sa[i] = 0;
                 }
             }
         }
 
-        private int LMS_post_proc(IList<int> T, IList<int> sa, int n, int m)
+        private int LMS_post_proc(ReadOnlySpan<byte> T, Span<byte> sa, int n, int m)
         {
             int i, j, p, q;
             int qlen, name;
@@ -150,7 +151,7 @@ namespace deltaq.SuffixSort
                 2*m must be not larger than n (proveable) */
             for (i = 0; (p = sa[i]) < 0; ++i)
             {
-                sa[i] = ~p;
+                sa[i] = checked((byte)~p);
             }
 
             if (i < m)
@@ -159,7 +160,7 @@ namespace deltaq.SuffixSort
                 {
                     if ((p = sa[i]) < 0)
                     {
-                        sa[j++] = ~p;
+                        sa[j++] = checked((byte)~p);
                         sa[i] = 0;
                         if (j == m)
                         {
@@ -185,7 +186,7 @@ namespace deltaq.SuffixSort
                 } while ((0 <= --i) && ((c0 = T[i]) <= c1));
                 if (0 <= i)
                 {
-                    sa[m + ((i + 1) >> 1)] = j - i;
+                    sa[m + ((i + 1) >> 1)] = checked((byte)(j - i));
                     j = i + 1;
                     do
                     {
@@ -218,29 +219,30 @@ namespace deltaq.SuffixSort
                     q = p;
                     qlen = plen;
                 }
-                sa[m + (p >> 1)] = name;
+                sa[m + (p >> 1)] = checked((byte)name);
             }
 
             return name;
         }
 
-        private void InduceSA(IList<int> T, int[] sa, IList<int> c, IList<int> b, int n, int k)
+        private void InduceSA(ReadOnlySpan<byte> T, Span<byte> sa, Span<byte> c, Span<byte> b, int n, int k)
         {
-            int bb, i, j;
+            byte bb;
+            int i, j;
             int c0, c1;
 
             /* compute SAl */
-            if (Equals(c, b))
+            if (c == b)
                 GetCounts(T, c, n, k);
             GetBuckets(c, b, k, false); /* find starts of buckets */
 
             j = n - 1;
             bb = b[c1 = T[j]];
-            sa[bb++] = ((0 < j) && (T[j - 1] < c1)) ? ~j : j;
+            sa[bb++] = checked((byte)(((0 < j) && (T[j - 1] < c1)) ? ~j : j));
             for (i = 0; i < n; ++i)
             {
                 j = sa[i];
-                sa[i] = ~j;
+                sa[i] = checked((byte)~j);
                 if (0 < j)
                 {
                     if ((c0 = T[--j]) != c1)
@@ -248,12 +250,12 @@ namespace deltaq.SuffixSort
                         b[c1] = bb;
                         bb = b[c1 = c0];
                     }
-                    sa[bb++] = ((0 < j) && (T[j - 1] < c1)) ? ~j : j;
+                    sa[bb++] = checked((byte)(((0 < j) && (T[j - 1] < c1)) ? ~j : j));
                 }
             }
 
             /* compute SAs */
-            if (Equals(c, b))
+            if (c == b)
                 GetCounts(T, c, n, k);
             GetBuckets(c, b, k, true); /* find ends of buckets */
 
@@ -266,11 +268,11 @@ namespace deltaq.SuffixSort
                         b[c1] = bb;
                         bb = b[c1 = c0];
                     }
-                    sa[--bb] = ((j == 0) || (T[j - 1] > c1)) ? ~j : j;
+                    sa[--bb] = checked((byte)(((j == 0) || (T[j - 1] > c1)) ? ~j : j));
                 }
                 else
                 {
-                    sa[i] = ~j;
+                    sa[i] = checked((byte)~j);
                 }
             }
         }
@@ -278,9 +280,9 @@ namespace deltaq.SuffixSort
         /* find the suffix array SA of T[0..n-1] in {0..k-1}^n
            use a working space (excluding T and SA) of at most 2n+O(1) for a constant alphabet */
 
-        private void sais_main(IList<int> T, int[] sa, int fs, int n, int k)
+        private void sais_main(ReadOnlySpan<byte> T, Span<byte> sa, int fs, int n, int k)
         {
-            IList<int> c, b;
+            Span<byte> c, b;
             int i, j, bb, m;
             int name;
             int c0, c1;
@@ -288,7 +290,7 @@ namespace deltaq.SuffixSort
 
             if (k <= MinBucketSize)
             {
-                c = new int[k];
+                c = new byte[k];
                 if (k <= fs)
                 {
                     b = sa.Slice(n + fs - k, sa.Length - (n + fs - k));
@@ -296,7 +298,7 @@ namespace deltaq.SuffixSort
                 }
                 else
                 {
-                    b = new int[k];
+                    b = new byte[k];
                     flags = 3;
                 }
             }
@@ -310,7 +312,7 @@ namespace deltaq.SuffixSort
                 }
                 else if (k <= (MinBucketSize * 4))
                 {
-                    b = new int[k];
+                    b = new byte[k];
                     flags = 2;
                 }
                 else
@@ -321,7 +323,7 @@ namespace deltaq.SuffixSort
             }
             else
             {
-                c = b = new int[k];
+                c = b = new byte[k];
                 flags = 4 | 8;
             }
 
@@ -354,7 +356,7 @@ namespace deltaq.SuffixSort
                 {
                     if (0 <= bb)
                     {
-                        sa[bb] = j;
+                        sa[bb] = checked((byte)j);
                     }
                     bb = --b[c1];
                     j = i;
@@ -372,7 +374,7 @@ namespace deltaq.SuffixSort
             }
             else if (m == 1)
             {
-                sa[bb] = j + 1;
+                sa[bb] = checked((byte)(j + 1));
                 name = 1;
             }
             else
@@ -411,7 +413,7 @@ namespace deltaq.SuffixSort
                 {
                     if (sa[i] != 0)
                     {
-                        sa[j--] = sa[i] - 1;
+                        sa[j--] = checked((byte)(sa[i] - 1));
                     }
                 }
 
@@ -434,7 +436,7 @@ namespace deltaq.SuffixSort
 
                     if (0 <= i)
                     {
-                        sa[j--] = i + 1;
+                        sa[j--] = checked((byte)(i + 1));
                         do
                         {
                             c1 = c0;
@@ -448,11 +450,11 @@ namespace deltaq.SuffixSort
                 }
                 if ((flags & 4) != 0)
                 {
-                    c = b = new int[k];
+                    c = b = new byte[k];
                 }
                 if ((flags & 2) != 0)
                 {
-                    b = new int[k];
+                    b = new byte[k];
                 }
             }
 
@@ -467,14 +469,11 @@ namespace deltaq.SuffixSort
                 GetBuckets(c, b, k, true); /* find ends of buckets */
                 i = m - 1;
                 j = n;
-                int p = sa[m - 1];
+                var p = sa[m - 1];
                 c1 = T[p];
                 do
                 {
-                    // ReSharper disable once PossibleNullReferenceException
                     int q = b[c0 = c1];
-
-                    // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
                     while (q < j)
                     {
                         sa[--j] = 0;
@@ -508,13 +507,12 @@ namespace deltaq.SuffixSort
         /// </summary>
         /// <param name="T">input bytes</param>
         /// <returns>0 if no error occurred, -1 or -2 otherwise</returns>
-        public int[] Sort(byte[] T)
+        public Span<byte> Sort(ReadOnlySpan<byte> T)
         {
             if (T == null)
                 throw new ArgumentNullException(nameof(T));
 
-            var sa = new int[T.Length + 1];
-
+            Span<byte> sa = stackalloc byte[T.Length + 1];
             if (T.Length <= 1)
             {
                 if (T.Length == 1)
@@ -523,85 +521,9 @@ namespace deltaq.SuffixSort
                 }
             }
             else
-                sais_main(new IntAccessor(T), sa, 0, T.Length, 256);
+                sais_main(T, sa, 0, T.Length, 256);
 
-            return sa;
-        }
-
-        private class IntAccessor : IList<int>
-        {
-            private readonly byte[] _buffer;
-
-            public IntAccessor(byte[] buf)
-            {
-                _buffer = buf;
-            }
-
-            public int IndexOf(int item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Insert(int index, int item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void RemoveAt(int index)
-            {
-                throw new NotImplementedException();
-            }
-
-            public int this[int index]
-            {
-                get { return _buffer[index]; }
-                set { _buffer[index] = (byte)value; }
-            }
-
-            public void Add(int item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Clear()
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool Contains(int item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void CopyTo(int[] array, int arrayIndex)
-            {
-                throw new NotImplementedException();
-            }
-
-            public int Count
-            {
-                get { return _buffer.Length; }
-            }
-
-            public bool IsReadOnly
-            {
-                get { return false; }
-            }
-
-            public bool Remove(int item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public IEnumerator<int> GetEnumerator()
-            {
-                throw new NotImplementedException();
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                throw new NotImplementedException();
-            }
+            return sa.ToArray();
         }
     }
 }
