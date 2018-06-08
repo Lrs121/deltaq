@@ -207,15 +207,19 @@ namespace deltaq.BsDiff
                             //backing for ctrl writes
                             CompactLong cl_lenf, cl_extraLength, cl_seek;
 
-                            //write ctrl block
+                            //begin ctrl block
+                            ///add
                             cl_lenf = lenf;
                             ctrlStream.Write(cl_lenf.Value);
 
+                            ///copy
                             cl_extraLength = extraLength;
                             ctrlStream.Write(cl_extraLength.Value);
 
+                            ///seek
                             cl_seek = (pos - lenb) - (lastpos + lenf);
                             ctrlStream.Write(cl_seek.Value);
+                            //end ctrl block
 
                             lastscan = scan - lenb;
                             lastpos = pos - lenb;
