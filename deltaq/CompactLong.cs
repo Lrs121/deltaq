@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace deltaq
 {
@@ -13,10 +12,9 @@ namespace deltaq
             this.Value = value;
         }
 
+        //offtout
         public static implicit operator CompactLong(long y)
         {
-            //var l = MemoryMarshal.CreateSpan(ref y, 1);
-            //var b = MemoryMarshal.Cast<long, byte>(l);
             var b = new byte[sizeof(long)];
             unchecked
             {
@@ -48,6 +46,7 @@ namespace deltaq
             return new CompactLong(b);
         }
 
+        //offtin
         public static implicit operator long(CompactLong x)
         {
             var b = x.Value;
