@@ -1,5 +1,4 @@
 ﻿using deltaq;
-using System.Runtime.InteropServices;
 using Xunit;
 
 namespace deltaq_tests
@@ -18,7 +17,7 @@ namespace deltaq_tests
         {
             CompactLong cl = l;
             long dummy_long = cl;
-            Assert.Equal<long>(cl, l);
+            Assert.Equal<long>(l, cl);
         }
 
         [Theory]
@@ -30,6 +29,13 @@ namespace deltaq_tests
         [InlineData(long.MaxValue)]
         [InlineData(long.MaxValue - 1)]
         public void SameAsBsdiffOfftout(long x)
+        {
+            var b = offtout(x);
+            CompactLong cl = new CompactLong(b);
+            Assert.Equal(b, cl.Value.ToArray());
+        }
+
+        private static byte[] offtout(long x)
         {
             var b = new byte[sizeof(long)];
 
@@ -46,9 +52,7 @@ namespace deltaq_tests
             y = y / 256; b[7] = (byte)(y % 256);
 
             if (x < 0) b[7] |= 0x80;
-
-            CompactLong cl = new CompactLong(b);
-            Assert.Equal<long>(x, cl);
+            return b;
         }
 
         [Theory]
@@ -62,8 +66,12 @@ namespace deltaq_tests
         public void SameAsBsdiffOfftin(long x)
         {
             CompactLong cl = x;
-            var b = cl.Value;
+            var y = offtin(offtout(x));
+            Assert.Equal<long>(y, cl);
+        }
 
+        private static long offtin(byte[] b)
+        {
             long y;
             y = b[7] & 0x7F;
             y = y * 256; y += b[6];
@@ -75,8 +83,7 @@ namespace deltaq_tests
             y = y * 256; y += b[0];
 
             if ((b[7] & 0x80) != 0) y = -y;
-
-            Assert.Equal<long>(y, cl);
+            return y;
         }
     }
 }
